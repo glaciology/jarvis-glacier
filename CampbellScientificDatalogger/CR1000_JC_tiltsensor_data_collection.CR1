@@ -1,0 +1,63 @@
+SequentialMode
+
+Public PTemp, batt_volt
+Public ArduinoCall As Long
+Public ArduinoNum As Long
+Public Loopr As Long
+Public InString As String * 140
+
+Public ResultString(10) 'As String * 140
+Alias ResultString (1) = Sensor 'As Float
+Alias ResultString (2) = X_accel 'As Float
+Alias ResultString (3) = Y_accel 'As Float
+Alias ResultString (4) = Z_accel 'As Float
+Alias ResultString (5) = X_mag 'As Float
+Alias ResultString (6) = Y_mag 'As Float
+Alias ResultString (7) = Z_mag 'As Float
+Alias ResultString (8) = temp_C 'As Float
+Alias ResultString (9) = temp_F 'As Float
+Alias ResultString (10) = Wall 'As Float
+DataTable (JC11m,-1,-1)
+	Sample (10,ResultString(),IEEE4)
+EndTable
+
+BeginProg
+  SerialOpen (Com1,9600,16,0,1024)
+  PortSet(3,0)
+	Scan (360,Min,0,0)
+		SW12(1) 'Power on the sensor string
+		Delay (0,3,Sec) 'Wait for Arduinos to initialize
+		PanelTemp (PTemp,250)
+		Battery (batt_volt)
+		Loopr = 0
+		ArduinoNum = 0
+		ArduinoCall = 0
+		'Loop through the sensor address numbers twice
+		For Loopr = 1 To 2 
+		  For ArduinoNum = 1 To 5
+		    Select Case ArduinoNum
+		    Case 1
+		      ArduinoCall = 180000
+		    Case 2
+		      ArduinoCall = 190000
+		    Case 3
+		      ArduinoCall = 200000
+		    Case 4
+		      ArduinoCall = 220000
+		    Case 5
+		      ArduinoCall = 230000
+		    EndSelect
+		    SerialFlush (Com1)
+		    PortSet(3,1)
+		    SerialOut (Com1,ArduinoCall,0,0,0)
+		    PortSet(3,0)
+		    SerialIn (InString,Com1,200,33,160)
+		    'Break down AND record space-separated readings in Table
+		    SplitStr (ResultString(),InString,CHR(32),10,5) 
+		    CallTable JC11m
+		    Delay(0,1,sec)
+		  Next ArduinoNum
+		Next Loopr 
+		SW12(0) 'Power down the sensor string
+	NextScan
+EndProg
